@@ -1,0 +1,51 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Load the dataset
+data = pd.read_csv("dataset_olympics.csv")
+
+# Fill missing values
+data['Age'].fillna(data['Age'].median(), inplace=True)
+data['Height'].fillna(data['Height'].median(), inplace=True)
+data['Weight'].fillna(data['Weight'].median(), inplace=True)
+data['Medal'].fillna('None', inplace=True)
+
+# Setting up the visualizations
+sns.set(style="whitegrid")
+
+# Medal Trends
+top_countries = data[data['Medal'] != 'None']['NOC'].value_counts().nlargest(5).index
+top_countries_medals = data[(data['NOC'].isin(top_countries)) & (data['Medal'] != 'None')]
+medal_trends = top_countries_medals.groupby(['Year', 'NOC', 'Medal']).size().unstack(fill_value=0).stack().reset_index(name='Count')
+medal_trends_pivot = medal_trends.pivot_table(index='Year', columns=['NOC', 'Medal'], values='Count', fill_value=0)
+
+# Athlete Demographics
+gender_over_time = data.groupby(['Year', 'Sex']).size().unstack().fillna(0)
+
+# Sport Participation
+sport_participation = data.groupby(['Year', 'Sport']).size().unstack(fill_value=0)
+
+# Physical Attributes vs. Performance
+attributes_medals = data[(data['Medal'] != 'None') & (data['Sport'].isin(['Athletics', 'Swimming']))]
+
+# Create a figure with subplots
+fig, axs = plt.subplots(2, 2, figsize=(16, 12))
+
+# Plotting each subplot
+sns.lineplot(data=medal_trends_pivot, ax=axs[0, 0], legend='full')
+sns.lineplot(data=gender_over_time, markers=True, dashes=False, ax=axs[0, 1])
+selected_sports = ['Athletics', 'Swimming', 'Gymnastics', 'Cycling', 'Rowing']
+for sport in selected_sports:
+    sns.lineplot(data=sport_participation[sport], ax=axs[1, 0], label=sport)
+sns.scatterplot(x='Height', y='Weight', hue='Medal', style='Sport', data=attributes_medals, ax=axs[1, 1])
+
+# Title each subplot
+axs[0, 0].set_title('Medal Trends by Top Countries')
+axs[0, 1].set_title('Gender Distribution Over Years')
+axs[1, 0].set_title('Sport Participation Over Years')
+axs[1, 1].set_title('Physical Attributes vs. Performance')
+
+# Save the figure
+plt.savefig("22073894.png", dpi=300)
+
